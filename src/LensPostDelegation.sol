@@ -9,8 +9,8 @@ contract LensPostDelegation {
 
     ILensHub lensHub;
 
-    mapping(uint256 => address) verifierFromProfileId;
-    mapping(uint256 => address) profileOwner;
+    mapping(uint256 => address) public verifierFromProfileId;
+    mapping(uint256 => address) public profileOwner;
     
     event PostCreated(DataTypes.PostData);
 
