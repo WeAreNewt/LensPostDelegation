@@ -1,0 +1,3 @@
+@lens/=lib/lens-protocol/contracts/
+@solmate/=lib/solmate/src/
+@openzeppelin/=lib/openzeppelin-contracts/contracts/
