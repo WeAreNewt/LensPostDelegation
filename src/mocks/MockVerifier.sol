@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../interfaces/IVerificator.sol";
+import "../interfaces/IVerifier.sol";
 
-contract TrueVerificatorMock is IVerificator {
+contract TrueVerifierMock is IVerifier {
 
     function verify(address _address) external pure returns (bool) {
         _address; // To remove warning
@@ -12,7 +12,7 @@ contract TrueVerificatorMock is IVerificator {
 
 }
 
-contract FalseVerificatorMock is IVerificator {
+contract FalseVerifierMock is IVerifier {
 
     function verify(address _address) external pure returns (bool) {
         _address; // To remove warning

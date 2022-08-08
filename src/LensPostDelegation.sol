@@ -3,13 +3,13 @@ pragma solidity ^0.8.10;
 
 import "@lens/interfaces/ILensHub.sol";
 import "@lens/libraries/DataTypes.sol";
-import "./interfaces/IVerificator.sol";
+import "./interfaces/IVerifier.sol";
 
 contract LensPostDelegation {
 
     ILensHub lensHub;
 
-    mapping(uint256 => address) verificatorFromProfileId;
+    mapping(uint256 => address) verifierFromProfileId;
     mapping(uint256 => address) profileOwner;
     
     event PostCreated(DataTypes.PostData);
@@ -32,8 +32,8 @@ contract LensPostDelegation {
         address referenceModule,
         bytes calldata referenceModuleInitData
     ) external {
-        IVerificator verificator = IVerificator(verificatorFromProfileId[profileId]);
-        bool verified = verificator.verify(msg.sender) ;
+        IVerifier verifier = IVerifier(verifierFromProfileId[profileId]);
+        bool verified = verifier.verify(msg.sender) ;
         if(!verified) revert NotVerifiedToPost();
 
         DataTypes.PostData memory data = DataTypes.PostData(
@@ -51,15 +51,15 @@ contract LensPostDelegation {
         
     }
 
-    function registerProfile(uint256 profileId, address verificatorAddress) external {
-        if(verificatorFromProfileId[profileId] != address(0)) revert AlreadyRegistered();
-        verificatorFromProfileId[profileId] = verificatorAddress;
+    function registerProfile(uint256 profileId, address verifierAddress) external {
+        if(verifierFromProfileId[profileId] != address(0)) revert AlreadyRegistered();
+        verifierFromProfileId[profileId] = verifierAddress;
         profileOwner[profileId] = msg.sender;
     }
 
-    function changeVerificator(uint256 profileId, address verificatorAddress) external {
+    function changeVerifier(uint256 profileId, address verifierAddress) external {
         if(profileOwner[profileId] != msg.sender) revert NotYourProfile();
-        verificatorFromProfileId[profileId] = verificatorAddress;
+        verifierFromProfileId[profileId] = verifierAddress;
     }
 
     function changeOwnerOfProfile(uint256 profileId, address newOwner) external {
@@ -71,6 +71,6 @@ contract LensPostDelegation {
     function unregisterProfile(uint256 profileId) external {
         if(profileOwner[profileId] != msg.sender) revert NotYourProfile();
         delete profileOwner[profileId];
-        delete verificatorFromProfileId[profileId];
+        delete verifierFromProfileId[profileId];
     }
 }

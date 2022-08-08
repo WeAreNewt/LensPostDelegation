@@ -2,8 +2,8 @@
 pragma solidity ^0.8.10;
 
 import "forge-std/Test.sol";
-import "../src/examples/NFTVerificator.sol";
-import "../src/examples/WhitelistVerificator.sol";
+import "../src/examples/NFTVerifier.sol";
+import "../src/examples/WhitelistVerifier.sol";
 import "../src/mocks/MockNFT.sol";
 import "../src/LensPostDelegation.sol";
 

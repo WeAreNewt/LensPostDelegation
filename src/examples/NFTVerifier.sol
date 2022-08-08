@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../interfaces/IVerificator.sol";
+import "../interfaces/IVerifier.sol";
 import "@openzeppelin/interfaces/IERC721.sol";
 import "@solmate/auth/Owned.sol";
 
-contract NFTVerificator is IVerificator, Owned {
+contract NFTVerifier is IVerifier, Owned {
     IERC721 nftCollection;
 
     constructor(address _nftCollectionAddress) Owned(msg.sender) {

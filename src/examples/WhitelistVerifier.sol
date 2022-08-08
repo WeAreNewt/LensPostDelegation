@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.10;
 
-import "../interfaces/IVerificator.sol";
+import "../interfaces/IVerifier.sol";
 import "@solmate/auth/Owned.sol";
 
-contract WhitelistVerificator is IVerificator, Owned {
+contract WhitelistVerifier is IVerifier, Owned {
 
     address[] public whitelist;
 
     error NotWhitelisted();
     error AlreadyWhitelisted();
+    
     event WhitelistAdded(address);
     event WhitelistRemoved(address);
 
