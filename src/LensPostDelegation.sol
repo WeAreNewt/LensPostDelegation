@@ -22,7 +22,6 @@ contract LensPostDelegation {
     mapping(uint256 => address) public verifierFromProfileId;
     mapping(uint256 => address) public profileOwner;
     
-
     constructor (address lensHubAddress) {
         lensHub = ILensHub(lensHubAddress);
     }
