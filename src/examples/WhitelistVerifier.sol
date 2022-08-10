@@ -5,15 +5,15 @@ import "../interfaces/IVerifier.sol";
 import "@solmate/auth/Owned.sol";
 
 contract WhitelistVerifier is IVerifier, Owned {
-
-    address[] public whitelist;
-
-    error NotWhitelisted();
-    error AlreadyWhitelisted();
-    
+ 
     event WhitelistAdded(address);
     event WhitelistRemoved(address);
 
+    error NotWhitelisted();
+    error AlreadyWhitelisted();
+
+    address[] public whitelist;
+   
     constructor() Owned(msg.sender) {}
 
     function verify(address _address) external view returns (bool) {
