@@ -1,6 +1,6 @@
 # LensPostDelegation
 
-Lens Post Delegation allows Lens Profiles to give `Publication` creation access to other Polygon addresses. When enabled, addresses can have shared group access to post on a behalf of a Lens Profile. 
+Lens Post Delegation allows Lens Profiles to bestow [publication](https://docs.lens.xyz/docs/publication) creation access to other Polygon addresses (but not comment, mirror, collect, nor follow access). When enabled, addresses can have shared group access to post on a behalf of a Lens Profile. 
 
 Lens Delegator Contract: [0x46fAf146C4683663667af868dFc2F98ADc27fBd6](https://polygonscan.com/address/0x46faf146c4683663667af868dfc2f98adc27fbd6)
 
