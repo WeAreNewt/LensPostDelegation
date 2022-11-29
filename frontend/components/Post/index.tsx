@@ -1,29 +1,19 @@
-// import { LensHubProxy } from '@abis/LensHubProxy';
-// import { useMutation } from '@apollo/client';
 import Attachments from 'components/Attachments/Attachments';
 import { AudioPublicationSchema } from 'components/Audio';
-// import Markup from '@components/Shared/Markup';
-
-// import { ErrorMessage } from '@components/UI/ErrorMessage';
- import { MentionTextArea } from 'components/UI/MentionTextArea';
- import { Button } from 'components/UI/Button';
+import { MentionTextArea } from 'components/UI/MentionTextArea';
+import { Button } from 'components/UI/Button';
 // import { Spinner } from '@components/UI/Spinner';
-// import useBroadcast from '@components/utils/hooks/useBroadcast';
 import type { LensterAttachment } from 'generated/lenstertypes';
-// import type { CreatePublicPostRequest, Mutation } from '@generated/types';
 import {
+  CollectModules,
   CreatePostTypedDataDocument,
   CreatePostViaDispatcherDocument,
   PublicationMainFocus,
   ReferenceModules
 } from 'generated/types';
-// import type { IGif } from '@giphy/js-types';
-// import { PencilAltIcon } from '@heroicons/react/outline';
-// import getSignature from '@lib/getSignature';
+
 import getTags from '@lib/getTags';
 import getUserLocale from '@lib/getUserLocale';
-// import onError from '@lib/onError';
-// import splitSignature from '@lib/splitSignature';
 import trimify from '@lib/trimify';
 import uploadToArweave from '@lib/uploadToArweave';
 import dynamic from 'next/dynamic';
@@ -45,31 +35,34 @@ import { usePublicationStore } from 'store/publication';
 // import { usePublicationStore } from 'src/store/publication';
 // import { useReferenceModuleStore } from 'src/store/referencemodule';
 // import { useTransactionPersistStore } from 'src/store/transaction';
-// import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 import { useCollectModuleStore } from 'store/collectmodule';
 import { useReferenceModuleStore } from 'store/referencemodule';
-// import { useContractWrite, useSignTypedData } from 'wagmi';
+import { useAccount, useContractWrite, usePrepareContractWrite, useSignTypedData } from 'wagmi';
+import { uploadFileAndMetadata } from '@lib/uploadToIPFS';
+import { WhitelistVerifier } from 'abis/WhitelistVerifier';
+import { LensPostDelegation } from 'abis/LensPostDelegation';
+import { defaultAbiCoder } from 'ethers/lib/utils';
+import { useProfileIdStore } from 'store/profileid';
+import { useUriStore } from 'store/uri';
+import { profile } from 'console';
+import { Spinner } from 'components/UI/Spinner';
+import { PencilAltIcon } from '@heroicons/react/outline';
+import { BigNumber } from 'ethers';
 
 const Attachment = dynamic(() => import('components/Attachment/Attachment'), {
   loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
 });
-// const Giphy = dynamic(() => import('@components/Shared/Giphy'), {
-//   loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
-// });
+
 const CollectSettings = dynamic(() => import('components/CollectSettings'), {
   loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
 });
 const ReferenceSettings = dynamic(() => import('components/ReferenceSettings'), {
   loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
 });
-// const Preview = dynamic(() => import('@components/Shared/Preview'), {
-//   loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
-// });
+
 
 const NewUpdate: FC = () => {
-  // App store
-  // const userSigNonce = useAppStore((state) => state.userSigNonce);
-  // const setUserSigNonce = useAppStore((state) => state.setUserSigNonce);
   const currentProfile = useAppStore((state) => state.currentProfile);
 
   // // Publication store
@@ -80,24 +73,35 @@ const NewUpdate: FC = () => {
   // const setPreviewPublication = usePublicationStore((state) => state.setPreviewPublication);
   // const setShowNewPostModal = usePublicationStore((state) => state.setShowNewPostModal);
 
-  // // Transaction persist store
-  // const txnQueue = useTransactionPersistStore((state) => state.txnQueue);
-  // const setTxnQueue = useTransactionPersistStore((state) => state.setTxnQueue);
-
   // // Collect module store
   // const resetCollectSettings = useCollectModuleStore((state) => state.reset);
   const payload = useCollectModuleStore((state) => state.payload);
+  const amount = useCollectModuleStore((state) => state.amount);
+  const currency = useCollectModuleStore((state) => state.selectedCurrency);
+  const { address } = useAccount()
+  const referralFee = useCollectModuleStore((state) => state.referralFee);
+  const collectLimit = useCollectModuleStore((state) => state.collectLimit);
 
+
+
+  const selectedCollectModule = useCollectModuleStore((state) => state.selectedCollectModule);
   // // Reference module store
   const selectedReferenceModule = useReferenceModuleStore((state) => state.selectedReferenceModule);
   const onlyFollowers = useReferenceModuleStore((state) => state.onlyFollowers);
   const degreesOfSeparation = useReferenceModuleStore((state) => state.degreesOfSeparation);
 
+
+  const profileId = useProfileIdStore((state) => state.profileId);
+
+  const uri = useUriStore((state) => state.uri);
+  const setUri = useUriStore((state) => state.setUri);
   // // States
   const [postContentError, setPostContentError] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(true);
+  const [uploaded, setUploaded] = useState(false);
+  // const [URI, setURI] = useState('');
+  const [input, setInput] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<LensterAttachment[]>([]);
-  // // const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({ onError });
 
   const isAudioPost = ALLOWED_AUDIO_TYPES.includes(attachments[0]?.type);
 
@@ -109,23 +113,10 @@ const NewUpdate: FC = () => {
     // resetCollectSettings();
   };
 
-  // useEffect(() => {
-  //   setPostContentError('');
-  // }, [audioPublication]);
+  useEffect(() => {
 
-  // const generateOptimisticPost = ({ txHash, txId }: { txHash?: string; txId?: string }) => {
-  //   return {
-  //     id: uuid(),
-  //     type: 'NEW_POST',
-  //     txHash,
-  //     txId,
-  //     content: publicationContent,
-  //     attachments,
-  //     title: audioPublication.title,
-  //     cover: audioPublication.cover,
-  //     author: audioPublication.author
-  //   };
-  // };
+  }, [input]);
+
 
 
   const getMainContentFocus = () => {
@@ -149,6 +140,13 @@ const NewUpdate: FC = () => {
     return null;
   };
 
+  const { isLoading: writeLoading, write } = useContractWrite({
+    address: '0xa5BD710580c078Fc26CeaF92607B08B660ae8664',
+    abi: LensPostDelegation,
+    functionName: 'post',
+    mode: 'recklesslyUnprepared'
+  });
+
 
   const createPost = async () => {
     // if (!currentProfile) {
@@ -166,7 +164,7 @@ const NewUpdate: FC = () => {
     if (publicationContent.length === 0 && attachments.length === 0) {
       return setPostContentError('Post should not be empty!');
     }
-
+    console.log(publicationContent)
     setPostContentError('');
     setIsUploading(true);
     const attributes = [
@@ -183,16 +181,17 @@ const NewUpdate: FC = () => {
         value: audioPublication.author
       });
     }
-    const id = await uploadToArweave({
+
+
+    const URI = await uploadFileAndMetadata({
       version: '2.0.0',
-      // metadata_id: uuid(),
+      metadata_id: uuidv4(),
       description: trimify(publicationContent),
       content: trimify(publicationContent),
-      external_url: `https://lenster.xyz/u/${currentProfile?.handle}`,
       image: attachments.length > 0 ? (isAudioPost ? audioPublication.cover : attachments[0]?.item) : null,
       imageMimeType:
         attachments.length > 0 ? (isAudioPost ? audioPublication.coverMimeType : attachments[0]?.type) : null,
-      name: isAudioPost ? audioPublication.title : `Post by @${currentProfile?.handle}`,
+      name: isAudioPost ? audioPublication.title : 'Delegation Post',
       tags: getTags(publicationContent),
       animation_url: getAnimationUrl(),
       mainContentFocus: getMainContentFocus(),
@@ -203,34 +202,124 @@ const NewUpdate: FC = () => {
       createdOn: new Date(),
       appId: APP_NAME
     }).finally(() => setIsUploading(false));
-    
-    const request = {
-      profileId: currentProfile?.id,
-      contentURI: `https://arweave.net/${id}`,
-      collectModule: payload,
-      referenceModule:
-        selectedReferenceModule === ReferenceModules.FollowerOnlyReferenceModule
-          ? { followerOnlyReferenceModule: onlyFollowers ? true : false }
-          : {
-              degreesOfSeparationReferenceModule: {
-                commentsRestricted: true,
-                mirrorsRestricted: true,
-                degreesOfSeparation
-              }
-            }
-    };
 
-    // if (currentProfile?.dispatcher?.canUseRelay) {
-    //   createViaDispatcher(request);
-    // } else {
-    //   createPostTypedData({
-    //     variables: {
-    //       options: { overrideSigNonce: userSigNonce },
-    //       request
-    //     }
-    //   });
-    // }
+    setUploaded(true)
+    console.log(URI)
+
+    switch (selectedCollectModule) {
+      case CollectModules.RevertCollectModule:
+        console.log('Setting RevertCollectModule input')
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI}`,
+            '0x5E70fFD2C6D04d65C3abeBa64E93082cfA348dF8', //revert collect module
+            defaultAbiCoder.encode(['bool'], [onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.FreeCollectModule:
+        console.log('Setting FreeCollectModule input')
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI}`,
+            '0x0BE6bD7092ee83D44a6eC1D949626FeE48caB30c', //free collect module
+            defaultAbiCoder.encode(['bool'], [onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.FeeCollectModule:
+        console.log('Setting FeeCollectModule input');
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI}`,
+            '0xeb4f3EC9d01856Cec2413bA5338bF35CeF932D82', //fee collect module
+            defaultAbiCoder.encode(['uint256', 'address', 'address', 'uint16', 'bool'], [Number(amount) * 10 ^ 18, currency, address, referralFee, onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.LimitedFeeCollectModule:
+        console.log('Setting LimitedFeeCollectModule input');
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI}`,
+            '0xFCDA2801a31ba70dfe542793020a934F880D54aB', //limited fee collect module
+            defaultAbiCoder.encode(['uint256', 'uint256', 'address', 'address', 'uint16', 'bool'], [collectLimit, Number(amount) * 10 ^ 18, currency, address, referralFee, onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.TimedFeeCollectModule:
+        console.log('Setting TimedFeeCollectModule input');
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI}`,
+            '0x36447b496ebc97DDA6d8c8113Fe30A30dC0126Db', //timed fee collect module
+            defaultAbiCoder.encode(['uint256', 'address', 'address', 'uint16', 'bool'], [amount, currency, address, referralFee, onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.LimitedTimedFeeCollectModule:
+        console.log('Setting LimitedTimedFeeCollectModule input');
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI}`,
+            '0xDa76E44775C441eF53B9c769d175fB2948F15e1C', //limited timed fee collect module
+            defaultAbiCoder.encode(['uint256', 'uint256', 'address', 'address', 'uint16', 'bool'], [BigNumber.from(collectLimit), BigNumber.from(amount), currency, address, referralFee, onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+
+      default:
+
+
+
+    }
+    console.log(URI)
+    console.log(profileId)
+
+    console.log(collectLimit, ' -- collect limit')
+    console.log(amount, ' -- amount')
+    console.log(currency, ' -- currency')
+    console.log(address, ' -- address')
+    console.log(referralFee, ' -- referralfee')
+    console.log(onlyFollowers, ' -- onlyfollowers')
+    // console.log(input)
+    // BigNumber.from("42")
+    // const request = {
+    //   profileId: profileId,
+    //   contentURI: `ipfs://${URI}`,
+    //   collectModule: payload,
+    //   referenceModule:
+    //     selectedReferenceModule === ReferenceModules.FollowerOnlyReferenceModule
+    //       ? { followerOnlyReferenceModule: onlyFollowers ? true : false }
+    //       : {
+    //         degreesOfSeparationReferenceModule: {
+    //           commentsRestricted: true,
+    //           mirrorsRestricted: true,
+    //           degreesOfSeparation
+    //         }
+    //       }
+    // };
+
+    return uri
   };
+
 
   // const isLoading =
   //   isUploading || typedDataLoading || dispatcherLoading || signLoading || writeLoading || broadcastLoading;
@@ -238,15 +327,15 @@ const NewUpdate: FC = () => {
   return (
     <div className="py-3">
       {/* {error && <ErrorMessage className="mb-3" title="Transaction failed!" error={error} />} */}
-      
-        <MentionTextArea
-          error={postContentError}
-          setError={setPostContentError}
-          placeholder="What's happening?"
-          hideBorder
-          autoFocus
-        />
-      
+
+      <MentionTextArea
+        error={postContentError}
+        setError={setPostContentError}
+        placeholder="What's happening?"
+        hideBorder
+        autoFocus
+      />
+
       <div className="block items-center sm:flex px-5">
         <div className="flex items-center space-x-4">
           <Attachment attachments={attachments} setAttachments={setAttachments} />
@@ -256,12 +345,26 @@ const NewUpdate: FC = () => {
         </div>
         <div className="ml-auto pt-2 sm:pt-0">
           <Button
-            // disabled={isLoading}
-            // icon={isLoading ? <Spinner size="xs" /> : <PencilAltIcon className="w-4 h-4" />}
+            className='mr-1'
+            disabled={uploaded}
+            // icon={!isUploading && <Spinner size="xs" /> }
+            // onClick={() => write?.()}
             onClick={createPost}
           >
             Post
           </Button>
+          {/* <Button
+            disabled={!uploaded}
+            // icon={isLoading ? <Spinner size="xs" /> : <PencilAltIcon className="w-4 h-4" />}
+            onClick={() => write?.()}
+          //  onClick={() => write?.({
+          //   recklesslySetUnpreparedArgs: input
+          // })}
+          //onClick={() => console.log(input)}
+          // onClick={() => post(input)}
+          >
+            Post
+          </Button> */}
         </div>
       </div>
       <div className="px-5">

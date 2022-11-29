@@ -4,7 +4,7 @@ import useOnClickOutside from 'utils/hooks/useOnClickOutside';
 import type { LensterAttachment } from 'generated/lenstertypes';
 import { Menu, Transition } from '@headlessui/react';
 import { MusicNoteIcon, PhotographIcon, VideoCameraIcon } from '@heroicons/react/outline';
-// import uploadToIPFS from '@lib/uploadToIPFS';
+import { uploadFile } from '@lib/uploadToIPFS';
 import clsx from 'clsx';
 import type { ChangeEvent, Dispatch, FC } from 'react';
 import { useRef } from 'react';
@@ -64,31 +64,34 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
     return false;
   };
 
-  // const handleAttachment = async (evt: ChangeEvent<HTMLInputElement>) => {
-  //   evt.preventDefault();
-  //   setShowMenu(false);
-  //   setLoading(true);
+  const handleAttachment = async (evt: ChangeEvent<HTMLInputElement>) => {
+    evt.preventDefault();
+    setShowMenu(false);
+    setLoading(true);
+    console.log('asd')
+    console.log(evt.target.files)
+    try {
+      // Count check
+      if (evt.target.files && (hasVideos(evt.target.files) || evt.target.files.length > 4)) {
+        return toast.error('Please choose either 1 video or up to 4 photos.');
+      }
 
-  //   try {
-  //     // Count check
-  //     if (evt.target.files && (hasVideos(evt.target.files) || evt.target.files.length > 4)) {
-  //       return toast.error('Please choose either 1 video or up to 4 photos.');
-  //     }
-
-  //     // Type check
-  //     if (isTypeAllowed(evt.target.files)) {
-  //       const attachment = await uploadToIPFS(evt.target.files);
-  //       if (attachment) {
-  //         setAttachments(attachment);
-  //         evt.target.value = '';
-  //       }
-  //     } else {
-  //       return toast.error('File format not allowed.');
-  //     }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      // Type check
+      if (isTypeAllowed(evt.target.files)) {
+        const attachment = await uploadFile(evt.target.files);
+        console.log(attachment)
+        if (attachment) {
+          setAttachments(attachment);
+          evt.target.value = '';
+        }
+        
+      } else {
+        return toast.error('File format not allowed.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Menu as="div">
@@ -138,7 +141,7 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
               multiple
               accept={ALLOWED_IMAGE_TYPES.join(',')}
               className="hidden"
-              // onChange={handleAttachment}
+              onChange={handleAttachment}
               disabled={attachments.length >= 4}
             />
           </Menu.Item>

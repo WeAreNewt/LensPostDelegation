@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { useAccount, useConnect, useDisconnect, useContractRead, useBalance, useBlockNumber, useNetwork } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useContractRead, useBalance, useBlockNumber, useNetwork, Connector } from 'wagmi'
 import { InjectedConnector } from 'wagmi/connectors/injected'
 import NewUpdate from '../components/Post'
 import { Button } from '../components/UI/Button'
@@ -9,14 +9,15 @@ import React, { useState, useEffect } from 'react';
 import { LENS_POST_DELEGATION } from '../contracts/contracts'
 import { LensPostDelegation } from '../abis/LensPostDelegation'
 import { useReferenceModuleStore } from 'store/referencemodule'
+import { useProfileIdStore } from 'store/profileid'
 import { ReferenceModules } from 'generated/types'
 export default function Home() {
   const setSelectedReferenceModule = useReferenceModuleStore((state) => state.setSelectedReferenceModule);
-
+  const setProfileId = useProfileIdStore((state) => state.setProfileId);
   const { address, isConnected } = useAccount()
   const { connect } = useConnect({
     connector: new InjectedConnector(),
-    onSuccess(data) {
+    onSuccess() {
       setConnected(true)
     }
   })
@@ -24,7 +25,7 @@ export default function Home() {
   const [connected, setConnected] = useState<boolean>(false);
   const [walletaddress, setWalletaddress] = useState<boolean>(false);
   const [permission, setPermission] = useState<boolean>(false);
-  const [profileId, setProfileid] = useState<string>('');
+  const [profile, setProfile] = useState<string>('');
 
   // const { data } = useContractRead({
   //   address: LENS_POST_DELEGATION,
@@ -33,9 +34,13 @@ export default function Home() {
   //   args: [address]
   // });
 
+  const hexToDecimal = (hex: string) => (parseInt(hex, 16));
+
   const handleChange = (event: any) => {
-    console.log(profileId)
-    setProfileid(event.target.value)
+    console.log(profile)
+    setProfile(event.target.value)
+    setProfileId(hexToDecimal(event.target.value))
+
   }
 
   const checkPermission = (e: any) => {
@@ -69,7 +74,7 @@ export default function Home() {
           !permission ? <div><form>
             <p className='font-semibold mb-2'>Enter profileId of Lens Profile you wish to post for</p>
             <div className='flex justify-between'>
-              <input value={profileId} onChange={handleChange} className="shadow appearance-none border rounded-lg h-12 w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="profileid" type="text" placeholder="profileid">
+              <input value={profile} onChange={handleChange} className="shadow appearance-none border rounded-lg h-12 w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="profileid" type="text" placeholder="profileid">
               </input>
               <Button onClick={e => checkPermission(e)} className='w-48 h-12 ml-4'> Submit </Button>
             </div>

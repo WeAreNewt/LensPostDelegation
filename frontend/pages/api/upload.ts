@@ -1,33 +1,52 @@
-import Bundlr from '@bundlr-network/client';
-import { withSentry } from '@sentry/nextjs';
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { APP_NAME, BUNDLR_CURRENCY, BUNDLR_NODE_URL, ERROR_MESSAGE } from 'constants/constants';
+// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import type { NextApiRequest, NextApiResponse } from "next";
+import formidable from "formidable";
+import axios from "axios";
+import FormData from "form-data";
+import path from "path";
+import fs from "fs";
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Invalid method!' });
-  }
-
-  if (!req.body) {
-    return res.status(400).json({ success: false, message: 'Bad request!' });
-  }
-
-  const payload = JSON.stringify(req.body);
-
-  try {
-    const bundlr = new Bundlr(BUNDLR_NODE_URL, BUNDLR_CURRENCY, process.env.BUNDLR_PRIVATE_KEY);
-    const tags = [
-      { name: 'Content-Type', value: 'application/json' },
-      { name: 'App-Name', value: APP_NAME }
-    ];
-
-    const uploader = bundlr.uploader.chunkedUploader;
-    const { data } = await uploader.uploadData(Buffer.from(payload), { tags });
-
-    return res.status(200).json({ success: true, id: data.id });
-  } catch {
-    return res.status(500).json({ success: false, message: ERROR_MESSAGE });
-  }
+type IPFSData = {
+  Name: string;
+  Hash: string;
+  Size: string;
 };
 
-export default withSentry(handler);
+const auth =
+  "Basic " +
+  Buffer.from(
+    process.env.NEXT_PUBLIC_INFURA_PID +
+      ":" +
+      process.env.NEXT_PUBLIC_INFURA_SECRET
+  ).toString("base64");
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<IPFSData>
+) {
+  const form = new formidable.IncomingForm();
+  form.parse(req);
+  form.on("file", async (_name, file) => {
+    console.log("Uploaded " + file.originalFilename);
+    const formdata = new FormData();
+    formdata.append("data", fs.createReadStream(file.filepath));
+    const upload = await axios.post(
+      "https://ipfs.infura.io:5001/api/v0/add",
+      formdata,
+      {
+        headers: {
+          Authorization: auth,
+        },
+      }
+    );
+    const ipfsData = upload.data as IPFSData;
+    res.status(200).json(ipfsData);
+  });
+  res.status(500);
+}
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};

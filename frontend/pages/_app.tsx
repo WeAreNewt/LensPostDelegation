@@ -12,7 +12,7 @@ import { InjectedConnector } from 'wagmi/connectors/injected'
 import { ApolloClient, InMemoryCache, ApolloProvider, gql } from '@apollo/client';
 
 const { chains, provider } = configureChains(
-  [chain.polygon],
+  [chain.polygonMumbai],
   [alchemyProvider({ apiKey: ALCHEMY_KEY })],
 )
 
