@@ -4,7 +4,7 @@ Lens Post Delegation allows Lens Profiles to bestow [publication](https://docs.l
 
 ## How It Works
 
-The [Lens Hub](https://docs.lens.xyz/docs/lenshub) has a 'setDispatcher' function that allows another address to be able to publish and set the URI on behalf of the profile.
+The [Lens Hub](https://docs.lens.xyz/docs/lenshub) has a `setDispatcher` function that allows another address to be able to publish and set the URI on behalf of the profile.
 
 Lens Post Delegation uses a Delegator Contract that acts as the Dispatcher for a Lens Profile. In turn, the Delegator Contract points to another contract, called the Verifier Contract, that sets the rules for which addresses can post on behalf of the Lens Profile.
 
