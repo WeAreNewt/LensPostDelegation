@@ -1,22 +1,27 @@
-import { Spinner } from 'components/UI/Spinner';
-import { Tooltip } from 'components/UI/Tooltip';
-import useOnClickOutside from 'utils/hooks/useOnClickOutside';
-import type { LensterAttachment } from 'generated/lenstertypes';
-import { Menu, Transition } from '@headlessui/react';
-import { MusicNoteIcon, PhotographIcon, VideoCameraIcon } from '@heroicons/react/outline';
+import { Spinner } from "components/UI/Spinner";
+import { Tooltip } from "components/UI/Tooltip";
+import useOnClickOutside from "utils/hooks/useOnClickOutside";
+import type { LensterAttachment } from "generated/lenstertypes";
+import { Menu, Transition } from "@headlessui/react";
+import {
+  MusicNoteIcon,
+  PhotographIcon,
+  VideoCameraIcon,
+} from "@heroicons/react/outline";
 // import uploadToIPFS from '@lib/uploadToIPFS';
-import clsx from 'clsx';
-import type { ChangeEvent, Dispatch, FC } from 'react';
-import { useRef } from 'react';
-import { Fragment } from 'react';
-import { useId, useState } from 'react';
-import toast from 'react-hot-toast';
+import clsx from "clsx";
+import type { ChangeEvent, Dispatch, FC } from "react";
+import { useRef } from "react";
+import { Fragment } from "react";
+import { useId, useState } from "react";
+import toast from "react-hot-toast";
 import {
   ALLOWED_AUDIO_TYPES,
   ALLOWED_IMAGE_TYPES,
   ALLOWED_MEDIA_TYPES,
-  ALLOWED_VIDEO_TYPES
-} from 'constants/constants';
+  ALLOWED_VIDEO_TYPES,
+} from "constants/constants";
+import axios from "axios";
 
 interface Props {
   attachments: LensterAttachment[];
@@ -64,31 +69,54 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
     return false;
   };
 
-  // const handleAttachment = async (evt: ChangeEvent<HTMLInputElement>) => {
-  //   evt.preventDefault();
-  //   setShowMenu(false);
-  //   setLoading(true);
+  const handleAttachment = async (evt: ChangeEvent<HTMLInputElement>) => {
+    evt.preventDefault();
+    setShowMenu(false);
+    setLoading(true);
 
-  //   try {
-  //     // Count check
-  //     if (evt.target.files && (hasVideos(evt.target.files) || evt.target.files.length > 4)) {
-  //       return toast.error('Please choose either 1 video or up to 4 photos.');
-  //     }
+    try {
+      // Count check
+      if (
+        evt.target.files &&
+        (hasVideos(evt.target.files) || evt.target.files.length > 4)
+      ) {
+        return toast.error("Please choose either 1 video or up to 4 photos.");
+      }
 
-  //     // Type check
-  //     if (isTypeAllowed(evt.target.files)) {
-  //       const attachment = await uploadToIPFS(evt.target.files);
-  //       if (attachment) {
-  //         setAttachments(attachment);
-  //         evt.target.value = '';
-  //       }
-  //     } else {
-  //       return toast.error('File format not allowed.');
-  //     }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      const file: any = evt?.target?.files ? evt?.target?.files[0] : null;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      console.log(file);
+
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      };
+      const uploadResponse = await axios.post(
+        "/api/uploadFilesToIPFS",
+        formData,
+        config
+      );
+
+      console.log(uploadResponse);
+
+      // Type check
+      // if (isTypeAllowed(evt.target.files)) {
+      //   const attachment = await axios(evt.target.files);
+      //   if (attachment) {
+      //     setAttachments(attachment);
+      //     evt.target.value = '';
+      //   }
+      // } else {
+      //   return toast.error('File format not allowed.');
+      // }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Menu as="div">
@@ -124,8 +152,8 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             as="label"
             className={({ active }) =>
               clsx(
-                { 'dropdown-active': active },
-                '!flex rounded-lg gap-1 space-x-1 items-center cursor-pointer menu-item'
+                { "dropdown-active": active },
+                "!flex rounded-lg gap-1 space-x-1 items-center cursor-pointer menu-item"
               )
             }
             htmlFor={`image_${id}`}
@@ -135,10 +163,10 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             <input
               id={`image_${id}`}
               type="file"
-              multiple
-              accept={ALLOWED_IMAGE_TYPES.join(',')}
+              // multiple
+              accept={ALLOWED_IMAGE_TYPES.join(",")}
               className="hidden"
-              // onChange={handleAttachment}
+              onChange={handleAttachment}
               disabled={attachments.length >= 4}
             />
           </Menu.Item>
@@ -146,8 +174,8 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             as="label"
             className={({ active }) =>
               clsx(
-                { 'dropdown-active': active },
-                '!flex rounded-lg gap-1 space-x-1 items-center cursor-pointer menu-item'
+                { "dropdown-active": active },
+                "!flex rounded-lg gap-1 space-x-1 items-center cursor-pointer menu-item"
               )
             }
             htmlFor={`video_${id}`}
@@ -157,7 +185,7 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             <input
               id={`video_${id}`}
               type="file"
-              accept={ALLOWED_VIDEO_TYPES.join(',')}
+              accept={ALLOWED_VIDEO_TYPES.join(",")}
               className="hidden"
               // onChange={handleAttachment}
               disabled={attachments.length >= 4}
@@ -167,8 +195,8 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             as="label"
             className={({ active }) =>
               clsx(
-                { 'dropdown-active': active },
-                '!flex rounded-lg gap-1 space-x-1 items-center cursor-pointer menu-item'
+                { "dropdown-active": active },
+                "!flex rounded-lg gap-1 space-x-1 items-center cursor-pointer menu-item"
               )
             }
             htmlFor={`audio_${id}`}
@@ -178,7 +206,7 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             <input
               id={`audio_${id}`}
               type="file"
-              accept={ALLOWED_AUDIO_TYPES.join(',')}
+              accept={ALLOWED_AUDIO_TYPES.join(",")}
               className="hidden"
               // onChange={handleAttachment}
               disabled={attachments.length >= 4}
