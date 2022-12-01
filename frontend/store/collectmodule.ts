@@ -9,8 +9,8 @@ interface CollectModuleState {
   setAmount: (amount: null | string) => void;
   selectedCurrency: null | string;
   setSelectedCurrency: (selectedCurrency: null | string) => void;
-  referralFee: null | string;
-  setReferralFee: (referralFee: null | string) => void;
+  referralFee: string;
+  setReferralFee: (referralFee:  string) => void;
   collectLimit: null | string;
   setCollectLimit: (collectLimit: null | string) => void;
   hasTimeLimit: boolean;
@@ -27,7 +27,7 @@ export const useCollectModuleStore = create<CollectModuleState>((set) => ({
   setAmount: (amount) => set(() => ({ amount })),
   selectedCurrency: DEFAULT_COLLECT_TOKEN,
   setSelectedCurrency: (selectedCurrency) => set(() => ({ selectedCurrency })),
-  referralFee: null,
+  referralFee: '0',
   setReferralFee: (referralFee) => set(() => ({ referralFee })),
   collectLimit: null,
   setCollectLimit: (collectLimit) => set(() => ({ collectLimit })),
@@ -40,7 +40,7 @@ export const useCollectModuleStore = create<CollectModuleState>((set) => ({
       selectedCollectModule: CollectModules.FreeCollectModule,
       amount: null,
       selectedCurrency: DEFAULT_COLLECT_TOKEN,
-      referralFee: null,
+      referralFee: '0',
       collectLimit: null,
       hasTimeLimit: false,
       payload: { freeCollectModule: { followerOnly: false } }

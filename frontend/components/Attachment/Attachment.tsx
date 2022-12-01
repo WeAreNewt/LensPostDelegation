@@ -84,35 +84,39 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
       }
 
       const file: any = evt?.target?.files ? evt?.target?.files[0] : null;
+      const asd: any = evt.target.files
+      const files: any = Array.from(asd);
+      const attachments = await Promise.all(
 
-      const formData = new FormData();
-      formData.append("file", file);
+        files.map(async (_: any, i: number) => {
+          const selectedFile = asd.item(i);
+          const formData = new FormData();
+          formData.append("file", selectedFile);
+          const config = {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          };
+          const uploadResponse = await axios.post(
+            "/api/uploadFilesToIPFS",
+            formData,
+            config
+          );
 
-      console.log(file);
-
-      const config = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      };
-      const uploadResponse = await axios.post(
-        "/api/uploadFilesToIPFS",
-        formData,
-        config
-      );
-
-      console.log(uploadResponse);
+          return {
+            item: `ipfs://${uploadResponse.data.Hash}`,
+            type: file.type || 'image/jpeg',
+            altTag: ''
+          };
+        }))
 
       // Type check
-      // if (isTypeAllowed(evt.target.files)) {
-      //   const attachment = await axios(evt.target.files);
-      //   if (attachment) {
-      //     setAttachments(attachment);
-      //     evt.target.value = '';
-      //   }
-      // } else {
-      //   return toast.error('File format not allowed.');
-      // }
+      if (isTypeAllowed(evt.target.files)) {
+        setAttachments(attachments)
+      } else {
+        return toast.error('File format not allowed.');
+      }
+      return attachments
     } finally {
       setLoading(false);
     }
@@ -163,7 +167,7 @@ const Attachment: FC<Props> = ({ attachments, setAttachments }) => {
             <input
               id={`image_${id}`}
               type="file"
-              // multiple
+              multiple
               accept={ALLOWED_IMAGE_TYPES.join(",")}
               className="hidden"
               onChange={handleAttachment}

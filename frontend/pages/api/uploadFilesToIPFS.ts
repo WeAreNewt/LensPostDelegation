@@ -15,9 +15,10 @@ const auth =
   "Basic " +
   Buffer.from(
     process.env.NEXT_PUBLIC_INFURA_PID +
-      ":" +
-      process.env.NEXT_PUBLIC_INFURA_SECRET
+    ":" +
+    process.env.NEXT_PUBLIC_INFURA_SECRET
   ).toString("base64");
+
 
 export default function handler(
   req: NextApiRequest,
@@ -30,8 +31,6 @@ export default function handler(
   form.parse(req);
 
   form.on("file", async (_name, file) => {
-    console.log("Uploaded " + file.originalFilename);
-
     const formdata = new FormData();
     formdata.append("data", fs.createReadStream(file.filepath));
 
