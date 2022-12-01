@@ -1,5 +1,4 @@
 import { chain } from 'wagmi';
-export const ALCHEMY_KEY = process.env.NEXT_PUBLIC_ALCHEMY_KEY;
 export const IPFS_GATEWAY = 'https://lens.infura-ipfs.io/ipfs/';
 export const AVATAR = '250:250';
 export const IMAGEKIT_URL = `https://ik.imagekit.io/lensterimg`;
@@ -24,7 +23,7 @@ export const COVER = '800';
 export const ERROR_MESSAGE = 'Something went wrong!';
 export const SIGN_WALLET = 'Please sign in your wallet.';
 
-export const DEFAULT_COLLECT_TOKEN = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270';
+export const DEFAULT_COLLECT_TOKEN = '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889';
 export const FREE_COLLECT_MODULE = '0x23b9467334bEb345aAa6fd1545538F3d54436e96';
 
 export const LS_KEYS = {

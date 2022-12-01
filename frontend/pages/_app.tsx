@@ -6,25 +6,30 @@ import {
   configureChains,
   chain,
 } from 'wagmi'
-import { alchemyProvider } from 'wagmi/providers/alchemy'
-import { ALCHEMY_KEY } from '../constants/constants'
-import { InjectedConnector } from 'wagmi/connectors/injected'
 import { ApolloClient, InMemoryCache, ApolloProvider, gql } from '@apollo/client';
+import { publicProvider } from 'wagmi/providers/public'
+import { MetaMaskConnector } from 'wagmi/connectors/metaMask'
+
 
 const { chains, provider } = configureChains(
-  [chain.polygon],
-  [alchemyProvider({ apiKey: ALCHEMY_KEY })],
+  [chain.polygonMumbai],
+  [publicProvider()],
 )
 
+const connector = new MetaMaskConnector({
+  chains: [chain.polygonMumbai],
+})
 const client = new ApolloClient({
   uri: 'https://api.lens.dev',
   cache: new InMemoryCache(),
 });
 
+
 const wagmiClient = createClient({
   autoConnect: true,
-  connectors: [new InjectedConnector({ chains })],
-  provider
+  connectors: [
+    new MetaMaskConnector({ chains })],
+  provider,
 });
 
 export default function App({ Component, pageProps }: AppProps) {

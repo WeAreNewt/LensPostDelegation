@@ -5,13 +5,14 @@ import { AudioPublicationSchema } from 'components/Audio';
 // import Markup from '@components/Shared/Markup';
 
 // import { ErrorMessage } from '@components/UI/ErrorMessage';
- import { MentionTextArea } from 'components/UI/MentionTextArea';
- import { Button } from 'components/UI/Button';
+import { MentionTextArea } from 'components/UI/MentionTextArea';
+import { Button } from 'components/UI/Button';
 // import { Spinner } from '@components/UI/Spinner';
 // import useBroadcast from '@components/utils/hooks/useBroadcast';
 import type { LensterAttachment } from 'generated/lenstertypes';
 // import type { CreatePublicPostRequest, Mutation } from '@generated/types';
 import {
+  CollectModules,
   CreatePostTypedDataDocument,
   CreatePostViaDispatcherDocument,
   PublicationMainFocus,
@@ -39,15 +40,22 @@ import {
   APP_NAME,
   SIGN_WALLET
 } from '../../constants/constants';
+
+import axios from "axios";
 import { usePublicationStore } from 'store/publication';
 // import { useAppStore } from 'src/store/app';
 // import { useCollectModuleStore } from 'src/store/collectmodule';
 // import { usePublicationStore } from 'src/store/publication';
 // import { useReferenceModuleStore } from 'src/store/referencemodule';
 // import { useTransactionPersistStore } from 'src/store/transaction';
-// import { v4 as uuid } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 import { useCollectModuleStore } from 'store/collectmodule';
 import { useReferenceModuleStore } from 'store/referencemodule';
+import { useAccount, useContractWrite } from 'wagmi';
+import { LensPostDelegation } from 'abis/LensPostDelegation';
+import { defaultAbiCoder } from 'ethers/lib/utils';
+import { useProfileIdStore } from 'store/profileid';
+import { BigNumber } from 'ethers';
 // import { useContractWrite, useSignTypedData } from 'wagmi';
 
 const Attachment = dynamic(() => import('components/Attachment/Attachment'), {
@@ -87,6 +95,16 @@ const NewUpdate: FC = () => {
   // // Collect module store
   // const resetCollectSettings = useCollectModuleStore((state) => state.reset);
   const payload = useCollectModuleStore((state) => state.payload);
+  const amount = useCollectModuleStore((state) => state.amount);
+  const currency = useCollectModuleStore((state) => state.selectedCurrency);
+  const { address } = useAccount()
+  const referralFee = useCollectModuleStore((state) => state.referralFee);
+  const collectLimit = useCollectModuleStore((state) => state.collectLimit);
+
+  const profileId = useProfileIdStore((state) => state.profileId);
+
+
+  const selectedCollectModule = useCollectModuleStore((state) => state.selectedCollectModule);
 
   // // Reference module store
   const selectedReferenceModule = useReferenceModuleStore((state) => state.selectedReferenceModule);
@@ -113,20 +131,13 @@ const NewUpdate: FC = () => {
   //   setPostContentError('');
   // }, [audioPublication]);
 
-  // const generateOptimisticPost = ({ txHash, txId }: { txHash?: string; txId?: string }) => {
-  //   return {
-  //     id: uuid(),
-  //     type: 'NEW_POST',
-  //     txHash,
-  //     txId,
-  //     content: publicationContent,
-  //     attachments,
-  //     title: audioPublication.title,
-  //     cover: audioPublication.cover,
-  //     author: audioPublication.author
-  //   };
-  // };
 
+  const { isLoading: writeLoading, write } = useContractWrite({
+    address: '0xa5BD710580c078Fc26CeaF92607B08B660ae8664',
+    abi: LensPostDelegation,
+    functionName: 'post',
+    mode: 'recklesslyUnprepared'
+  });
 
   const getMainContentFocus = () => {
     if (attachments.length > 0) {
@@ -183,62 +194,120 @@ const NewUpdate: FC = () => {
         value: audioPublication.author
       });
     }
-    const id = await uploadToArweave({
-      version: '2.0.0',
-      // metadata_id: uuid(),
-      description: trimify(publicationContent),
-      content: trimify(publicationContent),
-      external_url: `https://lenster.xyz/u/${currentProfile?.handle}`,
-      image: attachments.length > 0 ? (isAudioPost ? audioPublication.cover : attachments[0]?.item) : null,
-      imageMimeType:
-        attachments.length > 0 ? (isAudioPost ? audioPublication.coverMimeType : attachments[0]?.type) : null,
-      name: isAudioPost ? audioPublication.title : `Post by @${currentProfile?.handle}`,
-      tags: getTags(publicationContent),
-      animation_url: getAnimationUrl(),
-      mainContentFocus: getMainContentFocus(),
-      contentWarning: null, // TODO
-      attributes,
-      media: attachments,
-      locale: getUserLocale(),
-      createdOn: new Date(),
-      appId: APP_NAME
-    }).finally(() => setIsUploading(false));
     
-    const request = {
-      profileId: currentProfile?.id,
-      contentURI: `https://arweave.net/${id}`,
-      collectModule: payload,
-      referenceModule:
-        selectedReferenceModule === ReferenceModules.FollowerOnlyReferenceModule
-          ? { followerOnlyReferenceModule: onlyFollowers ? true : false }
-          : {
-              degreesOfSeparationReferenceModule: {
-                commentsRestricted: true,
-                mirrorsRestricted: true,
-                degreesOfSeparation
-              }
-            }
+    const config = {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+    const URI = await axios.post(
+      "/api/uploadMetadataToIPFS",
+      {
+        version: '2.0.0',
+        metadata_id: uuidv4(),
+        description: trimify(publicationContent),
+        content: trimify(publicationContent),
+        image: attachments.length > 0 ? (isAudioPost ? audioPublication.cover : attachments[0]?.item) : null,
+        imageMimeType:
+          attachments.length > 0 ? (isAudioPost ? audioPublication.coverMimeType : attachments[0]?.type) : null,
+        name: isAudioPost ? audioPublication.title : 'Delegation Post',
+        tags: getTags(publicationContent),
+        animation_url: getAnimationUrl(),
+        mainContentFocus: getMainContentFocus(),
+        contentWarning: null, // TODO
+        attributes,
+        media: attachments,
+        locale: getUserLocale(),
+        createdOn: new Date(),
+        appId: APP_NAME
+      },
+      config
+    );
+
+    switch (selectedCollectModule) {
+      case CollectModules.RevertCollectModule:
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI.data.path}`,
+            '0x5E70fFD2C6D04d65C3abeBa64E93082cfA348dF8', //revert collect module
+            defaultAbiCoder.encode(['bool'], [onlyFollowers]),
+            '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.FreeCollectModule:
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI.data.path}`,
+            '0x0BE6bD7092ee83D44a6eC1D949626FeE48caB30c', //free collect module
+            defaultAbiCoder.encode(['bool'], [onlyFollowers]),
+            onlyFollowers ? '0x7Ea109eC988a0200A1F79Ae9b78590F92D357a16' : '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.FeeCollectModule:
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI.data.path}`,
+            '0xeb4f3EC9d01856Cec2413bA5338bF35CeF932D82', //fee collect module
+            defaultAbiCoder.encode(['uint256', 'address', 'address', 'uint16', 'bool'], [BigNumber.from(amount).mul(BigNumber.from('10').pow(18)), currency, address, referralFee, onlyFollowers]),
+            onlyFollowers ? '0x7Ea109eC988a0200A1F79Ae9b78590F92D357a16' : '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.LimitedFeeCollectModule:
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI.data.path}`,
+            '0xFCDA2801a31ba70dfe542793020a934F880D54aB', //limited fee collect module
+            defaultAbiCoder.encode(['uint256', 'uint256', 'address', 'address', 'uint16', 'bool'], [collectLimit, BigNumber.from(amount).mul(BigNumber.from('10').pow(18)), currency, address, referralFee, onlyFollowers]),
+            onlyFollowers ? '0x7Ea109eC988a0200A1F79Ae9b78590F92D357a16' : '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.TimedFeeCollectModule:
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI.data.path}`,
+            '0x36447b496ebc97DDA6d8c8113Fe30A30dC0126Db', //timed fee collect module
+            defaultAbiCoder.encode(['uint256', 'address', 'address', 'uint16', 'bool'], [BigNumber.from(amount).mul(BigNumber.from('10').pow(18)), currency, address, referralFee, onlyFollowers]),
+            onlyFollowers ? '0x7Ea109eC988a0200A1F79Ae9b78590F92D357a16' : '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+        break;
+      case CollectModules.LimitedTimedFeeCollectModule:
+        write?.({
+          recklesslySetUnpreparedArgs: [
+            profileId,
+            `ipfs://${URI.data.path}`,
+            '0xDa76E44775C441eF53B9c769d175fB2948F15e1C', //limited timed fee collect module
+            defaultAbiCoder.encode(['uint256', 'uint256', 'address', 'address', 'uint16', 'bool'], [collectLimit, BigNumber.from(amount).mul(BigNumber.from('10').pow(18)), currency, address, referralFee, onlyFollowers]),
+            onlyFollowers ? '0x7Ea109eC988a0200A1F79Ae9b78590F92D357a16' : '0x0000000000000000000000000000000000000000',
+            defaultAbiCoder.encode(['string'], [""])
+          ]
+        })
+      
+      default:
     };
 
-    // if (currentProfile?.dispatcher?.canUseRelay) {
-    //   createViaDispatcher(request);
-    // } else {
-    //   createPostTypedData({
-    //     variables: {
-    //       options: { overrideSigNonce: userSigNonce },
-    //       request
-    //     }
-    //   });
-    // }
-  };
+    return URI
 
-  // const isLoading =
-  //   isUploading || typedDataLoading || dispatcherLoading || signLoading || writeLoading || broadcastLoading;
+  }
 
-  return (
-    <div className="py-3">
-      {/* {error && <ErrorMessage className="mb-3" title="Transaction failed!" error={error} />} */}
-      
+    return (
+      <div className="py-3">
+        {/* {error && <ErrorMessage className="mb-3" title="Transaction failed!" error={error} />} */}
+
         <MentionTextArea
           error={postContentError}
           setError={setPostContentError}
@@ -246,30 +315,29 @@ const NewUpdate: FC = () => {
           hideBorder
           autoFocus
         />
-      
-      <div className="block items-center sm:flex px-5">
-        <div className="flex items-center space-x-4">
-          <Attachment attachments={attachments} setAttachments={setAttachments} />
-          <CollectSettings />
-          <ReferenceSettings />
-          {/* {publicationContent && <Preview />} */}
-        </div>
-        <div className="ml-auto pt-2 sm:pt-0">
-          <Button
-            // disabled={isLoading}
-            // icon={isLoading ? <Spinner size="xs" /> : <PencilAltIcon className="w-4 h-4" />}
-            onClick={createPost}
-          >
-            Post
-          </Button>
-        </div>
-      </div>
-      <div className="px-5">
-        <Attachments attachments={attachments} setAttachments={setAttachments} isNew />
-      </div>
-    </div>
-  );
-};
 
-export default NewUpdate;
+        <div className="block items-center sm:flex px-5">
+          <div className="flex items-center space-x-4">
+            <Attachment attachments={attachments} setAttachments={setAttachments} />
+            <CollectSettings />
+            <ReferenceSettings />
+            {/* {publicationContent && <Preview />} */}
+          </div>
+          <div className="ml-auto pt-2 sm:pt-0">
+            <Button
+              onClick={createPost}
+            >
+              Post
+            </Button>
+          </div>
+        </div>
+        <div className="px-5">
+          <Attachments attachments={attachments} setAttachments={setAttachments} isNew />
+        </div>
+      </div>
+    );
+  };
+
+  export default NewUpdate;
+
 

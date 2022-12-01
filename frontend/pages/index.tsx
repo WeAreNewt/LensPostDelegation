@@ -10,9 +10,10 @@ import { LENS_POST_DELEGATION } from '../contracts/contracts'
 import { LensPostDelegation } from '../abis/LensPostDelegation'
 import { useReferenceModuleStore } from 'store/referencemodule'
 import { ReferenceModules } from 'generated/types'
+import { useProfileIdStore } from 'store/profileid'
 export default function Home() {
   const setSelectedReferenceModule = useReferenceModuleStore((state) => state.setSelectedReferenceModule);
-
+  const setProfileId = useProfileIdStore((state) => state.setProfileId);
   const { address, isConnected } = useAccount()
   const { connect } = useConnect({
     connector: new InjectedConnector(),
@@ -26,21 +27,14 @@ export default function Home() {
   const [permission, setPermission] = useState<boolean>(false);
   const [profileId, setProfileid] = useState<string>('');
 
-  // const { data } = useContractRead({
-  //   address: LENS_POST_DELEGATION,
-  //   abi: LensPostDelegation,
-  //   functionName: 'verify',
-  //   args: [address]
-  // });
-
+  const hexToDecimal = (hex: string) => (parseInt(hex, 16));
   const handleChange = (event: any) => {
-    console.log(profileId)
     setProfileid(event.target.value)
+    setProfileId(hexToDecimal(event.target.value))
   }
 
   const checkPermission = (e: any) => {
     e.preventDefault()
-    // const isVerified: boolean = data as boolean
     setPermission(true)
   }
 
