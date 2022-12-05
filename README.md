@@ -1,6 +1,6 @@
 # Lens Post Delegation
 
-Lens Post Delegation allows Lens Profiles to bestow [publication](https://docs.lens.xyz/docs/publication) creation access to other Polygon addresses (but not comment, mirror, collect, nor follow access). When enabled, addresses can have shared group access to post on a behalf of a Lens Profile. 
+Lens Post Delegation allows Lens Profiles to bestow [publication](https://docs.lens.xyz/docs/publication) creation access to other Polygon addresses (but not comment, mirror, collect, nor follow access). When enabled, addresses can have shared group access to post on a behalf of a Lens Profile. For example, an organization's Lens Profile can now be shared by a number of its contributors.
 
 ## How It Works
 
